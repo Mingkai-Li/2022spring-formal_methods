@@ -1,0 +1,77 @@
+MODULE main
+    VAR
+        c1: {0, 2, 4, 6};
+        c2: {0, 2, 4, 6};
+        c3: {0, 2, 4, 6};
+        c4: {0, 2, 4, 6};
+        c5: {0, 2, 4, 6};
+        c6: {0, 2, 4, 6};
+
+        pr2: process main_node(c5, c1, {4, 6}, 2);
+        pr4: process main_node(c2, c3, {2, 6}, 4);
+        pr6: process main_node(c3, c4, {2, 4}, 6);
+
+        pr3: process bypass_node(c1, c2, c6, {2, 4, 6}, {2, 4, 6});
+        pr17: process bypass_node(c4, c5, c6, {2, 4, 6}, {2, 4, 6});
+    ASSIGN
+        init(c1) := 0;
+        init(c2) := 0;
+        init(c3) := 0;
+        init(c4) := 0;
+        init(c5) := 0;
+        init(c6) := 0;
+
+        next(c1) := c1;
+        next(c2) := c2;
+        next(c3) := c3;
+        next(c4) := c4;
+        next(c5) := c5;
+        next(c6) := c6;
+    CTLSPEC
+        AG(!(c1!=0 & c2!=0 & c2!=4 & c3!=0 & c3!=6 & c4!=0 & c5!=0 & c5!=2 & c6!=0))
+
+MODULE main_node(c_in, c_out, m, id)
+    VAR
+        st: {s, p};
+    ASSIGN
+        init(st) := {s, p};
+        next(st) := {s, p};
+        next(c_in) :=
+            case
+                (c_in = id): 0;
+                (c_in != 0 & c_in != id & st = p & c_out = 0): 0;
+                TRUE: c_in;
+            esac;
+        next(c_out) :=
+            case
+                (c_out = 0 & st = s): m;
+                (c_in != 0 & c_in != id & st = p & c_out = 0): c_in;
+                TRUE: c_out;
+            esac;
+    FAIRNESS running
+
+MODULE bypass_node(c_in, c_out, c_inout, out_list, inout_list)
+    VAR
+        st: {p_in, p_inout};
+    ASSIGN
+        init(st) := {p_in, p_inout};
+        next(st) := {p_in, p_inout};
+        next(c_in) :=
+            case
+                (c_in != 0 & c_out = 0 & st = p_in & c_in in out_list): 0;
+                (c_in != 0 & c_inout = 0 & st = p_in & c_in in inout_list): 0;
+                TRUE: c_in;
+            esac;
+        next(c_out) :=
+            case
+                (c_in != 0 & c_out = 0 & st = p_in & c_in in out_list): c_in;
+                (c_inout != 0 & c_out = 0 & st = p_inout & c_inout in out_list): c_inout;
+                TRUE: c_out;
+            esac;
+        next(c_inout) :=
+            case
+                (c_inout != 0 & c_out = 0 & st = p_inout & c_inout in out_list): 0;
+                (c_in != 0 & c_inout = 0 & st = p_in & c_in in inout_list): c_in;
+                TRUE: c_inout;
+            esac;
+    FAIRNESS running

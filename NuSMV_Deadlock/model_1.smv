@@ -1,0 +1,140 @@
+MODULE main
+    VAR
+        c1: {0, 1, 5, 9, 13};
+        c2: {0, 1, 5, 9, 13};
+        c3: {0, 1, 5, 9, 13};
+        c4: {0, 1, 5, 9, 13};
+        c5: {0, 1, 5, 9, 13};
+        c6: {0, 1, 5, 9, 13};
+        c7: {0, 1, 5, 9, 13};
+        c8: {0, 1, 5, 9, 13};
+        c9: {0, 1, 5, 9, 13};
+        c10: {0, 1, 5, 9, 13};
+        c11: {0, 1, 5, 9, 13};
+        c12: {0, 1, 5, 9, 13};
+
+        pr1: process main_node(c8, c1, {5, 9, 13}, 1);
+        pr5: process main_node(c2, c3, {1, 9, 13}, 5);
+        pr9: process main_node(c4, c5, {1, 5, 13}, 9);
+        pr13: process main_node(c6, c7, {1, 5, 9}, 13);
+
+        pr3: process bypass_node(c1, c2, c9, {5}, {5, 9, 13});
+        pr7: process bypass_node(c3, c4, c11, {9}, {1, 9, 13});
+        pr11: process bypass_node(c5, c6, c12, {13}, {1, 5, 13});
+        pr15: process bypass_node(c7, c8, c10, {1}, {1, 5, 9});
+
+        pr17: process center_node(c9, c10, c11, c12);
+    ASSIGN
+        init(c1) := 0;
+        init(c2) := 0;
+        init(c3) := 0;
+        init(c4) := 0;
+        init(c5) := 0;
+        init(c6) := 0;
+        init(c7) := 0;
+        init(c8) := 0;
+        init(c9) := 0;
+        init(c10) := 0;
+        init(c11) := 0;
+        init(c12) := 0;
+
+        next(c1) := c1;
+        next(c2) := c2;
+        next(c3) := c3;
+        next(c4) := c4;
+        next(c5) := c5;
+        next(c6) := c6;
+        next(c7) := c7;
+        next(c8) := c8;
+        next(c9) := c9;
+        next(c10) := c10;
+        next(c11) := c11;
+        next(c12) := c12;
+    CTLSPEC
+        AG(!(c1!=0 & c2!=0 & c2!=5 & c3!=0 & c4!=0 & c4!=9 & c5!=0 & c6!=0 & c6!=13 & c7!=0 & c8!=0 & c8!=1 & c9!=0 & c10!=0 & c11!=0 & c12!=0))
+
+MODULE main_node(c_in, c_out, m, id)
+    VAR
+        st: {s, p};
+    ASSIGN
+        init(st) := {s, p};
+        next(st) := {s, p};
+        next(c_in) :=
+            case
+                (c_in = id): 0;
+                (c_in != 0 & c_in != id & st = p & c_out = 0): 0;
+                TRUE: c_in;
+            esac;
+        next(c_out) :=
+            case
+                (c_out = 0 & st = s): m;
+                (c_in != 0 & c_in != id & st = p & c_out = 0): c_in;
+                TRUE: c_out;
+            esac;
+    FAIRNESS running
+
+MODULE bypass_node(c_in, c_out, c_inout, out_list, inout_list)
+    VAR
+        st: {p_in, p_inout};
+    ASSIGN
+        init(st) := {p_in, p_inout};
+        next(st) := {p_in, p_inout};
+        next(c_in) :=
+            case
+                (c_in != 0 & c_out = 0 & st = p_in & c_in in out_list): 0;
+                (c_in != 0 & c_inout = 0 & st = p_in & c_in in inout_list): 0;
+                TRUE: c_in;
+            esac;
+        next(c_out) :=
+            case
+                (c_in != 0 & c_out = 0 & st = p_in & c_in in out_list): c_in;
+                (c_inout != 0 & c_out = 0 & st = p_inout & c_inout in out_list): c_inout;
+                TRUE: c_out;
+            esac;
+        next(c_inout) :=
+            case
+                (c_inout != 0 & c_out = 0 & st = p_inout & c_inout in out_list): 0;
+                (c_in != 0 & c_inout = 0 & st = p_in & c_in in inout_list): c_in;
+                TRUE: c_inout;
+            esac;
+    FAIRNESS running
+
+MODULE center_node(up, left, right, down)
+    VAR
+        st: {p_up, p_left, p_right, p_down};
+    ASSIGN
+        init(st) := {p_up, p_left, p_right, p_down};
+        next(st) := {p_up, p_left, p_right, p_down};
+        next(up) :=
+            case
+                (up = 9 & right = 0 & st = p_up): 0;
+                (up = 13 & down = 0 & st = p_up): 0;
+                (left = 5 & up = 0 & st = p_left): 5;
+                (down = 5 & up = 0 & st = p_down): 5;
+                TRUE: up;
+            esac;
+        next(left) :=
+            case
+                (left = 5 & up = 0 & st = p_left): 0;
+                (left = 9 & right = 0 & st = p_left): 0;
+                (right = 1 & left = 0 & st = p_right): 1;
+                (down = 1 & left = 0 & st = p_down): 1;
+                TRUE: left;
+            esac;
+        next(right) :=
+            case
+                (right = 13 & down = 0 & st = p_right): 0;
+                (right = 1 & left = 0 & st = p_right): 0;
+                (up = 9 & right = 0 & st = p_up): 9;
+                (left = 9 & right = 0 & st = p_left): 9;
+                TRUE: right;
+            esac;
+        next(down) :=
+            case
+                (down = 1 & left = 0 & st = p_down): 0;
+                (down = 5 & up = 0 & st = p_down): 0;
+                (up = 13 & down = 0 & st = p_up): 13;
+                (right = 13 & down = 0 & st = p_right): 13;
+                TRUE: down;
+            esac;
+    FAIRNESS running
